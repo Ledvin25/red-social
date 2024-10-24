@@ -840,6 +840,7 @@ def get_followed_trip_goals():
 
     return jsonify(list(trip_goals))
 
+# Esto se estaría ejecutando en un worker o en un cronjob cada cierto tiempo
 # Cachear los posts con mas de x reacciones en Redis
 @app.route("/cache-posts", methods=["POST"])
 def cache_posts():
@@ -853,6 +854,11 @@ def cache_posts():
         redis_client.setex(f"post:{post['id']}", 86400, post)
 
     return jsonify({"message": "Posts cached successfully"})
+
+# --------------------------------------- ENDPOINTS ADICIONALES ---------------------------------------
+
+# El enunciado no especifica si se debe implementar un endpoint para obtener un especifico post, comentario, destino, etc. 
+# Pero aqui se muestra un ejemplo de como se podria hacer, aplica para todos los modelos, primero se busca en Redis y si no se encuentra se busca en MongoDB.
 
 # Obtener un post
 @app.route("/posts/<int:post_id>", methods=["GET"])
@@ -870,8 +876,7 @@ def get_post(post_id):
 
     return jsonify(post)
 
-
-
+# --------------------------------------- MAIN ---------------------------------------
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)
