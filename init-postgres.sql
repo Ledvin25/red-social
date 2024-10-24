@@ -4,6 +4,7 @@
 CREATE TABLE users (
     sub SERIAL PRIMARY KEY,
     username VARCHAR(50) NOT NULL,
+    password VARCHAR(50) NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -25,10 +26,10 @@ CREATE TABLE trip_goals (
 
 
 -- Inserts de prueba para la tabla de usuarios
-INSERT INTO users (username) VALUES ('user1');
-INSERT INTO users (username) VALUES ('user2');
-INSERT INTO users (username) VALUES ('user3');
-INSERT INTO users (username) VALUES ('user4');
+INSERT INTO users (username, password) VALUES ('user1', 'password1');
+INSERT INTO users (username, password) VALUES ('user2', 'password2');
+INSERT INTO users (username, password) VALUES ('user3', 'password3');
+INSERT INTO users (username, password) VALUES ('user4', 'password4');
 
 -- Inserts de prueba para la tabla de posts
 INSERT INTO posts (sub) VALUES (1);

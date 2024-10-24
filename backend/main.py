@@ -54,13 +54,55 @@ def authenticate():
 
 # --------------------------------------- USERS ---------------------------------------
 
+# Signup
+@app.route("/signup", methods=["POST"])
+def signup():
+    # Singup simple, solo se crea un user y contraseña en la base de datos y se guarda el sub en la base de datos
+    # Ya que no se especifica en el enunciado como se autentica el usuario, se presumia hacerlo con OAuth2 pero por simplicidad se hace con un token estático
+
+    # Obtener los datos del usuario
+    username = request.form.get("username")
+    password = request.form.get("password")
+
+    # Validar que los datos requeridos estén presentes
+    if not username or not password:
+        return jsonify({"error": "Username and password are required"}), 400
+    
+    # Insertar el usuario en la base de datos
+    cursor = pg_conn.cursor()
+    cursor.execute("INSERT INTO users (username, password) VALUES (%s, %s) RETURNING sub", (username, password))
+    user_id = cursor.fetchone()[0]
+    pg_conn.commit()
+    cursor.close()
+
+    return jsonify({"message": "User created successfully", "sub": user_id})
+
 # Login
 @app.route("/login", methods=["POST"])
 def login():
-    # Aquí iría la lógica de autenticación con OAuth2 pero para el proyecto entregable no es requerida según el enunciado.
+    # login simple, solo se verifica el usuario y contraseña en la base de datos
+    # Ya que no se especifica en el enunciado como se autentica el usuario, se presumia hacerlo con OAuth2 pero por simplicidad se hace con un token estático
+
+    # Obtener los datos del usuario
+    username = request.form.get("username")
+    password = request.form.get("password")
+
+    # Validar que los datos requeridos estén presentes
+    if not username or not password:
+        return jsonify({"error": "Username and password are required"}), 400
+    
+    # Verificar las credenciales en la base de datos
+    cursor = pg_conn.cursor()
+    cursor.execute("SELECT sub FROM users WHERE username = %s AND password = %s", (username, password))
+    user_id = cursor.fetchone()
+    cursor.close()
+
+    if not user_id:
+        return jsonify({"error": "Invalid credentials"}), 401
+    
     
     # Guardar la sesión en Redis con un TTL de 10 horas (36000 segundos)
-    session_id = "session_id_example"  # Aquí deberías generar un ID de sesión único
+    session_id = "session_id_example"  # Aquí se generaría un ID de sesión único
     redis_client.setex(f"session:{session_id}", 36000, STATIC_TOKEN)
     
     return jsonify({"message": "Login successful", "token": STATIC_TOKEN, "session_id": session_id})
