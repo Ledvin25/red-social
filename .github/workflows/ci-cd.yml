@@ -58,7 +58,7 @@ jobs:
       - name: Run tests
         run: |
           cd backend
-          pytest --cov=main --cov-report=xml --junitxml=test-results.xml
+          ./entrypoint.sh
 
       - name: Upload test results
         uses: actions/upload-artifact@v3
