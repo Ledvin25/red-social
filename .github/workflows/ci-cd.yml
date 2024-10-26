@@ -55,13 +55,13 @@ jobs:
           pytest --cov=main --cov-report=xml --junitxml=test-results.xml
 
       - name: Upload test results
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: test-results
           path: backend/test-results.xml
 
       - name: Upload coverage report
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3
         with:
           name: coverage-report
           path: backend/coverage.xml
