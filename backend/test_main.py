@@ -1,11 +1,31 @@
 import pytest
 from flask import Flask, request, jsonify
 from main import app, pg_conn, mongo_db, redis_client, STATIC_TOKEN
+import time
 
 @pytest.fixture
 def client():
     with app.test_client() as client:
         yield client
+
+# Retry mechanism to ensure PostgreSQL is ready
+def wait_for_postgres():
+    retries = 5
+    while retries > 0:
+        try:
+            pg_conn.cursor().execute('SELECT 1')
+            return
+        except Exception as e:
+            print(f"Waiting for PostgreSQL to be ready: {e}")
+            retries -= 1
+            time.sleep(5)
+    raise Exception("PostgreSQL is not ready")
+
+@pytest.fixture(autouse=True)
+def setup_and_teardown():
+    wait_for_postgres()
+    yield
+    # Teardown code if needed
 
 # 1- Test successful signup
 def test_signup(client):
