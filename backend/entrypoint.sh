@@ -2,7 +2,7 @@
 
 # Retry mechanism to ensure PostgreSQL is ready
 function wait_for_postgres() {
-    retries=5
+    retries=10
     while [ $retries -gt 0 ]; do
         pg_isready -h db -U myuser
         if [ $? -eq 0 ]; then
@@ -11,7 +11,7 @@ function wait_for_postgres() {
         fi
         echo "Waiting for PostgreSQL to be ready..."
         retries=$((retries-1))
-        sleep 5
+        sleep 10
     done
     echo "PostgreSQL is not ready"
     exit 1
