@@ -36,6 +36,9 @@ services:
     container_name: backend
     ports:
       - "8000:8000"
+    volumes:
+      - ./backend:/app
+      - ./test-results:/app/test-results
     depends_on:
       - db
       - mongo

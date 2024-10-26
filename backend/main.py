@@ -10,7 +10,7 @@ app = Flask(__name__)
 # Reacciones válidas
 REACTIONS = ["like", "love", "haha", "wow", "sad", "angry"]
 
-X = 5  # Cantidad de reacciones para cachear un post
+X = 2  # Cantidad de reacciones para cachear un post
 
 # Configuración de PostgreSQL con reintentos
 @retry(wait=wait_fixed(2), stop=stop_after_delay(30))
@@ -46,7 +46,7 @@ STATIC_TOKEN = "SOYUNTOKEN"
 # Middleware de autenticación
 @app.before_request
 def authenticate():
-    if request.endpoint != 'login':
+    if request.endpoint not in ['login', 'signup']:
         token = request.headers.get('Authorization')
         if token != STATIC_TOKEN:
             return jsonify({"error": "Unauthorized"}), 401
@@ -75,7 +75,7 @@ def signup():
     pg_conn.commit()
     cursor.close()
 
-    return jsonify({"message": "User created successfully", "sub": user_id})
+    return jsonify({"message": "User created successfully"})
 
 # Login
 @app.route("/login", methods=["POST"])
@@ -110,8 +110,14 @@ def login():
 # Logout
 @app.route("/logout", methods=["POST"])
 def logout():
-    # Eliminar la sesión de Redis
+
+
+    # Verificar que haya token en la cabecera
     session_id = request.headers.get('Session-ID')
+
+    if not session_id:
+        return jsonify({"error": "Session-ID is required"}), 400
+
     redis_client.delete(f"session:{session_id}")
     
     return jsonify({"message": "Logout successful"})
@@ -119,8 +125,12 @@ def logout():
 # Comprobar si el cookie es igual al de redis
 @app.route("/check-session", methods=["POST"])
 def check_session():
-    # Comprobar si el cookie es igual al de Redis
+    # Verificar que haya Session-ID en la cabecera
     session_id = request.headers.get('Session-ID')
+    if not session_id:
+        return jsonify({"error": "Session-ID is required"}), 400
+
+    # Comprobar si el cookie es igual al de Redis
     token = redis_client.get(f"session:{session_id}")
     if token:
         # Reiniciar el TTL de 10 horas (36000 segundos)
@@ -665,10 +675,12 @@ def delete_destination(destination_id):
 # Obtener los trip goals de un usuario
 @app.route("/trip-goals/<int:user_id>", methods=["GET"])
 def get_trip_goals(user_id):
-    # Obtener el nombre de usuario desde la base de datos
+    
+    # Verificar que el usuario exista en la base de datos
     cursor = pg_conn.cursor()
     cursor.execute("SELECT username FROM users WHERE sub = %s", (user_id,))
-    userName = cursor.fetchone()[0]
+    if not cursor.fetchone():
+        return jsonify({"error": "User not found"}), 404
 
     # Obtener los trip goals del usuario desde MongoDB
     trip_goals_collection = mongo_db["tripGoals"]
@@ -868,6 +880,11 @@ def get_followed_trip_goals():
     # Obtener el sub de usuario desde el token
     user_id = 1
 
+    # Verificar que la sesión sea válida
+    session_id = request.headers.get('Session-ID')
+    if not session_id:
+        return jsonify({"error": "Session-ID is required"}), 401
+
     # Obtener los trip goals seguidos por el usuario desde PostgreSQL
     cursor = pg_conn.cursor()
     cursor.execute(
@@ -893,7 +910,7 @@ def cache_posts():
 
     # Insertar los posts en Redis con un TTL de un día (86400 segundos)
     for post in popular_posts:
-        redis_client.setex(f"post:{post['id']}", 86400, post)
+        redis_client.setex(f"post:{post['id']}", 86400, jsonify(post).get_data(as_text=True))
 
     return jsonify({"message": "Posts cached successfully"})
 
@@ -902,13 +919,13 @@ def cache_posts():
 # El enunciado no especifica si se debe implementar un endpoint para obtener un especifico post, comentario, destino, etc. 
 # Pero aqui se muestra un ejemplo de como se podria hacer, aplica para todos los modelos, primero se busca en Redis y si no se encuentra se busca en MongoDB.
 
-# Obtener un post
+# Obtener un post primero de Redis y si no se encuentra en MongoDB
 @app.route("/posts/<int:post_id>", methods=["GET"])
 def get_post(post_id):
     # Obtener el post de Redis
     post = redis_client.get(f"post:{post_id}")
     if post:
-        return jsonify(post)
+        return jsonify(eval(post.decode('utf-8')))
     
     # Obtener el post de MongoDB
     posts_collection = mongo_db["posts"]
@@ -917,6 +934,16 @@ def get_post(post_id):
         return jsonify({"error": "Post not found"}), 404
 
     return jsonify(post)
+
+# Ver sesiones activas
+@app.route("/sessions", methods=["GET"])
+def active_sessions():
+    # Obtener todas las sesiones activas de Redis
+    sessions = redis_client.keys("session:*")
+    # Decodificar las claves de bytes a strings
+    sessions = [session.decode('utf-8') for session in sessions]
+    return jsonify(sessions)
+    
 
 # --------------------------------------- MAIN ---------------------------------------
 

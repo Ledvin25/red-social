@@ -1,0 +1,5 @@
+version: '3.8'
+
+services:
+  backend:
+    command: ["pytest", "--cov=main", "--cov-report=xml:/backend/coverage.xml", "--junitxml=/backend/test-results.xml"]
